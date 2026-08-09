@@ -1,0 +1,30 @@
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    working_dir: /home/dynamodblocal
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+
+  fluxgate:
+    build: .
+    restart: on-failure
+    depends_on:
+      - dynamodb-local
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      AWS_REGION: us-east-1
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      DYNAMODB_TABLE: fluxgate-rate-limits
+      BUCKET_TTL_SECONDS: 86400
+      MAX_CONFLICT_RETRIES: 32
+      RUST_LOG: fluxgate=info,tower_http=info
+      LOG_FORMAT: json
+    ports:
+      - "8080:8080"
+
+volumes:
+  dynamodb-data:
